@@ -10,6 +10,7 @@ pub struct Shape {
     pub shape_structure: [[i32; 2]; 4],
     pub shape_type: String,
     last_update_time: f64,
+    pub rotation_index: i32,
 }
 
 impl Shape {
@@ -21,40 +22,37 @@ impl Shape {
         match shape_type {
             "L" => { // L - white
                 sprite = resources.l;
-                //structure = [[-1, 0],[0, 0],[1, 0],[1, -1]];
-                //structure = [[0, -1],[0, 0],[0, 1],[1, 1]];
-                structure = [[-1, 1],[-1, 0],[0, 0],[1, 0]];
-                //structure = [[-1, -1],[0, -1],[0, 0],[0, 1]];
+                structure = [[0, 0],[0, 0],[0, 0],[0, 0]];
                 t = "L".to_string();
             },
             "Z" => { // Z - red
                 sprite = resources.z;
-                structure = [[0, -1],[0, 0],[-1, 0],[-1, 1]];
+                structure = [[0, 0],[0, 0],[0, 0],[0, 0]];
                 t = "Z".to_string();
             },
             "I" => { // I - pinc
                 sprite = resources.i;
-                structure = [[0, -1],[0, 0],[0, 1],[0, 2]];
+                structure = [[0, 0],[0, 0],[0, 0],[0, 0]];
                 t = "I".to_string();
             },
             "T" => { // T - brown
                 sprite = resources.t;
-                structure = [[-1, 0],[0, 0],[1, 0],[0, 1]];
+                structure = [[0, 0],[0, 0],[0, 0],[0, 0]];
                 t = "T".to_string();
             },
             "O" => { // O - green
                 sprite = resources.o;
-                structure = [[0, 0],[1, 0],[0, 1],[1, 1]];
+                structure = [[0, 0],[0, 0],[0, 0],[0, 0]];
                 t = "O".to_string();
             },
             "J" => { // J - yellow
                 sprite = resources.j;
-                structure = [[1, -1],[0, -1],[0, 0],[0, 1]];
+                structure = [[0, 0],[0, 0],[0, 0],[0, 0]];
                 t = "J".to_string();
             },
             _ => { // S blue
                 sprite = resources.s;
-                structure = [[0, -1],[0, 0],[1, 0],[1, 1]];
+                structure = [[0, 0],[0, 0],[0, 0],[0, 0]];
                 t = "S".to_string();
             },
         }
@@ -67,11 +65,12 @@ impl Shape {
             shape_structure: structure,
             last_update_time: get_time(),
             shape_type: t,
+            rotation_index: 0,
         }
     }
 
-    pub fn move_down(&mut self) {
-        if get_time() - self.last_update_time >= resources::INIT_SPEED {
+    pub fn move_down(&mut self, falling_speed: f64) {
+        if get_time() - self.last_update_time >= falling_speed {
             self.y += 30.0;
             self.last_update_time = get_time();
         }
@@ -87,7 +86,70 @@ impl Shape {
         thread::sleep(Duration::from_millis(resources::THREAD_SLEEP));
     }
 
+    fn update(&mut self) {
+        match self.shape_type.to_string().as_str() {
+            "L" => {
+                match self.rotation_index {
+                    0 => {self.shape_structure = [[-1, -1],[0, -1],[0, 0],[0, 1]]},
+                    1 => {self.shape_structure = [[-1, 1],[-1, 0],[0, 0],[1, 0]]},
+                    2 => {self.shape_structure = [[0, -1],[0, 0],[0, 1],[1, 1]]},
+                    _ => {self.shape_structure = [[-1, 0],[0, 0],[1, 0],[1, -1]]},
+                }
+            },
+            "Z" => {
+                match self.rotation_index {
+                    0 => {self.shape_structure = [[-1, 1],[-1, 0],[0, 0],[0, -1]]},
+                    1 => {self.shape_structure = [[-1, 0],[0, 0],[0, 1],[1, 1]]},
+                    2 => {self.shape_structure = [[-1, 1],[-1, 0],[0, 0],[0, -1]]},
+                    _ => {self.shape_structure = [[-1, 0],[0, 0],[0, 1],[1, 1]]},
+                }
+            },
+            "I" => {
+                match self.rotation_index {
+                    0 => {self.shape_structure = [[0, -1],[0, 0],[0, 1],[0, 2]]},
+                    1 => {self.shape_structure = [[-1, 0],[0, 0],[1, 0],[2, 0]]},
+                    2 => {self.shape_structure = [[0, -1],[0, 0],[0, 1],[0, 2]]},
+                    _ => {self.shape_structure = [[-1, 0],[0, 0],[1, 0],[2, 0]]},
+                }
+            },
+            "T" => {
+                match self.rotation_index {
+                    0 => {self.shape_structure = [[-1, 0],[0, -1],[0, 0],[0, 1]]},
+                    1 => {self.shape_structure = [[-1, 0],[0, 0],[1, 0],[0, 1]]},
+                    2 => {self.shape_structure = [[0, -1],[0, 0],[1, 0],[0, 1]]},
+                    _ => {self.shape_structure = [[-1, 0],[0, 0],[0, -1],[1, 0]]},
+                }
+            },
+            "O" => {
+                match self.rotation_index {
+                    0 => {self.shape_structure = [[0, 0],[1, 0],[1, -1],[0, -1]]},
+                    1 => {self.shape_structure = [[0, 0],[1, 0],[1, -1],[0, -1]]},
+                    2 => {self.shape_structure = [[0, 0],[1, 0],[1, -1],[0, -1]]},
+                    _ => {self.shape_structure = [[0, 0],[1, 0],[1, -1],[0, -1]]},
+                }
+            },
+            "J" => {
+                match self.rotation_index {
+                    0 => {self.shape_structure = [[0, -1],[0, 0],[-1, 1],[0, 1]]},
+                    1 => {self.shape_structure = [[-1, 0],[0, 0],[1, 0],[1, 1]]},
+                    2 => {self.shape_structure = [[0, -1],[1, -1],[0, 0],[0, 1]]},
+                    _ => {self.shape_structure = [[-1, -1],[-1, 0],[0, 0],[1, 0]]},
+                }
+            },
+            "S" => {
+                match self.rotation_index {
+                    0 => {self.shape_structure = [[-1, -1],[-1, 0],[0, 0],[0, 1]]},
+                    1 => {self.shape_structure = [[-1, 0],[0, 0],[0, -1],[1, -1]]},
+                    2 => {self.shape_structure = [[-1, -1],[-1, 0],[0, 0],[0, 1]]},
+                    _ => {self.shape_structure = [[-1, 0],[0, 0],[0, -1],[1, -1]]},
+                }
+            },
+            _ => {}
+        }
+    }
+
     pub fn draw(&mut self) {
+        self.update();
         for i in self.shape_structure {
             let x: f32 = self.x + i[0] as f32 * resources::BLOCKSIZE;
             let y: f32 = self.y + i[1] as f32 * resources::BLOCKSIZE;

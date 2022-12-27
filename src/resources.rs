@@ -10,9 +10,9 @@ pub const NROWS: i32 = 17; // Y
 // размер блока в пикселях
 pub const BLOCKSIZE: f32 = 30.0;
 
-pub const INIT_SPEED: f64 = 0.3;
+pub const INIT_SPEED: f64 = 0.9;
 
-pub const THREAD_SLEEP: u64 = 60;
+pub const THREAD_SLEEP: u64 = 90;
 
 pub struct Resources {
     pub border: Texture2D,

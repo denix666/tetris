@@ -1,9 +1,14 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use macroquad::prelude::*;
 extern crate rand;
 use rand::Rng;
 
 mod points;
 use points::Point;
+
+mod game;
+use game::Game;
 
 mod shape;
 use shape::Shape;
@@ -82,7 +87,7 @@ fn make_board_array() -> Vec<Point> {
 pub fn get_val(check_x: i32, check_y: i32, points: &Vec<Point>) -> String {
     let ret = match points.iter().position(|x| x.x == check_x && x.y == check_y) {
         Some(idx) => points[idx].value.to_string(),
-        _ => String::from(" "),
+        _ => String::from("#"),
     };
     ret
 }
@@ -120,6 +125,92 @@ fn can_move(shape: &Shape, points: &Vec<Point>, dir: String) -> bool {
     ret
 }
 
+fn can_rotate(shape: &Shape, points: &Vec<Point>) -> bool {
+    let mut ret: bool = false;
+    let mut x_shift: i32 = 0;
+
+    match shape.shape_type.to_string().as_str() {
+        "I" => {
+            if shape.rotation_index == 1 || shape.rotation_index == 3 {
+                if shape.x < 5.0 * resources::BLOCKSIZE {
+                    x_shift = 0;
+                } else {
+                    x_shift = 0;
+                }
+            } else {
+                if shape.x < 5.0 * resources::BLOCKSIZE {
+                    x_shift = -1;
+                } else {
+                    x_shift = 2;
+                }
+            }
+            
+        },
+        "L" => {
+            if shape.rotation_index == 1 || shape.rotation_index == 3 {
+                if shape.x < 5.0 * resources::BLOCKSIZE {
+                    x_shift = 0;
+                } else {
+                    x_shift = 0;
+                }
+            } else {
+                if shape.x < 5.0 * resources::BLOCKSIZE {
+                    x_shift = -1;
+                } else {
+                    x_shift = 1;
+                }
+            }
+            
+        },
+        "J" => {
+            if shape.rotation_index == 1 || shape.rotation_index == 3 {
+                if shape.x < 5.0 * resources::BLOCKSIZE {
+                    x_shift = 1;
+                } else {
+                    x_shift = 1;
+                }
+            } else {
+                if shape.x < 5.0 * resources::BLOCKSIZE {
+                    x_shift = -1;
+                } else {
+                    x_shift = 1;
+                }
+            }
+            
+        },
+        "S" | "O" | "T" | "Z" => {
+            if shape.rotation_index == 1 || shape.rotation_index == 3 {
+                if shape.x < 5.0 * resources::BLOCKSIZE {
+                    x_shift = 0;
+                } else {
+                    x_shift = 0;
+                }
+            } else {
+                if shape.x < 5.0 * resources::BLOCKSIZE {
+                    x_shift = -1;
+                } else {
+                    x_shift = 1;
+                }
+            }
+        },
+        _ => {}
+    }
+    
+    for i in shape.shape_structure {
+        let x: i32 = (shape.x / resources::BLOCKSIZE) as i32 + i[0] + x_shift;
+        let y: i32 = (shape.y / resources::BLOCKSIZE) as i32 + i[1];
+
+        if get_val(x, y, &points) != " " {
+            ret = false;
+            break;
+        } else {
+            ret = true;
+        }
+    }
+
+    ret
+}
+
 fn window_conf() -> Conf {
     let mut title = String::from("Tetris v");
     title.push_str(env!("CARGO_PKG_VERSION"));
@@ -141,9 +232,10 @@ pub enum GameState {
 #[macroquad::main(window_conf)]
 async fn main() {
     let game_state = GameState::Game;
-    let mut points: Vec<Point> = make_board_array(); // do not forget!!!!!!!
+    let mut points: Vec<Point> = make_board_array();
     let mut shapes: Vec<Shape> = Vec::new();
     let resources = Resources::new().await;
+    let mut game = Game::new().await;
 
     loop {
         clear_background(BLACK);
@@ -163,7 +255,8 @@ async fn main() {
                         _ => "S",
                     };
                     shapes.push(
-                        //Shape::new(7.0 * resources::BLOCKSIZE, 1.0 * resources::BLOCKSIZE, "L", &resources).await,
+                        // DEBUG
+                        //Shape::new(7.0 * resources::BLOCKSIZE, 1.0 * resources::BLOCKSIZE, "J", &resources).await,
                         Shape::new(7.0 * resources::BLOCKSIZE, 1.0 * resources::BLOCKSIZE, shape_type, &resources).await,
                     );
                 }
@@ -182,21 +275,23 @@ async fn main() {
                     }
 
                     if is_key_pressed(KeyCode::Up) {
-                        let mut i: usize = 0;
-                        let tmp_x: i32 = shape.shape_structure[0][1];
-                        let tmp_y: i32 = shape.shape_structure[0][0];
-                        
-                        for _ in 0..3 {
-                            shape.shape_structure[i][0] = shape.shape_structure[i+1][1];
-                            shape.shape_structure[i][1] = shape.shape_structure[i+1][0];
-                            i += 1;
+                        if can_rotate(shape, &points) {
+                            if shape.rotation_index == 3 {
+                                shape.rotation_index = 0;
+                            } else {
+                                shape.rotation_index += 1;
+                            }
                         }
-                        shape.shape_structure[3][0] = tmp_x;
-                        shape.shape_structure[3][1] = tmp_y; 
+                    }
+
+                    if is_key_down(KeyCode::Down) {
+                        game.falling_speed = 0.1;
+                    } else {
+                        game.falling_speed = resources::INIT_SPEED;
                     }
 
                     if can_move(shape, &points, "down".to_string()) {
-                        shape.move_down();
+                        shape.move_down(game.falling_speed);
                     } else {
                         for i in shape.shape_structure {
                             let x: i32 = (shape.x / resources::BLOCKSIZE) as i32 + i[0];
