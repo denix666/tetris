@@ -21,12 +21,12 @@ jobs:
       run: |
         mv target/release/rusted-tetris rusted-tetris
         chmod 777 rusted-tetris
-        tar cpfz rusted-tetris.tar.gz rusted-tetris assets
+        tar cpfz rusted-tetris_linux_x86_64.tar.gz rusted-tetris assets
         
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
-        files: rusted-tetris.tar.gz
+        files: rusted-tetris_linux_x86_64.tar.gz
 
   win_build:
     runs-on: windows-latest
@@ -46,9 +46,9 @@ jobs:
     - shell: bash
       run: |
         mv target/release/rusted-tetris rusted-tetris
-        7z a rusted-tetris.zip rusted-tetris.exe assets
+        7z a rusted-tetris_windows_x86_64.zip rusted-tetris.exe assets
         
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
-        files: rusted-tetris.zip
+        files: rusted-tetris_windows_x86_64.zip
