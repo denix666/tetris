@@ -84,8 +84,9 @@ fn make_board_array() -> Vec<Point> {
     for x in 17..24 {
         for y in 0..18 {
             if y > 1 && y < 7 && x >= 17 && x < 23 || // Next shape window
-               y > 9 && y < 12 && x >= 17 && x < 23 || // Score window
-               y > 12 && y < 15 && x >= 17 && x < 23 // Level window
+               y > 7 && y < 10 && x >= 17 && x < 23 || // Score window
+               y > 10 && y < 13 && x >= 17 && x < 23 || // Level window
+               y > 13 && y < 16 && x >= 17 && x < 23 // Lines removed window
             {
                 points.push(
                     Point::new(x,y," ".to_string()),
@@ -261,7 +262,7 @@ fn select_shape() -> &'static str {
     return shape_type
 }
 
-pub fn draw_info(font: Font, score: &str, level: &str) {
+pub fn draw_info(font: Font, score: &str, level: &str, lines_removed: &str) {
     draw_text_ex("NEXT: ", 560.0, 90.0, 
         TextParams {
             font,
@@ -271,7 +272,7 @@ pub fn draw_info(font: Font, score: &str, level: &str) {
         },
     );
     
-    draw_text_ex("SCORE: ", 520.0, 335.0, 
+    draw_text_ex("SCORE: ", 520.0, 275.0, 
         TextParams {
             font,
             font_size: 20,
@@ -280,7 +281,7 @@ pub fn draw_info(font: Font, score: &str, level: &str) {
         },
     );
 
-    draw_text_ex(score, 620.0, 335.0, 
+    draw_text_ex(score, 620.0, 275.0, 
         TextParams {
             font,
             font_size: 20,
@@ -289,7 +290,7 @@ pub fn draw_info(font: Font, score: &str, level: &str) {
         },
     );
 
-    draw_text_ex("LEVEL: ", 520.0, 425.0, 
+    draw_text_ex("LEVEL: ", 520.0, 365.0, 
         TextParams {
             font,
             font_size: 20,
@@ -298,7 +299,25 @@ pub fn draw_info(font: Font, score: &str, level: &str) {
         },
     );
 
-    draw_text_ex(level, 620.0, 425.0, 
+    draw_text_ex(level, 620.0, 365.0, 
+        TextParams {
+            font,
+            font_size: 20,
+            color: ORANGE,
+            ..Default::default()
+        },
+    );
+
+    draw_text_ex("LINES: ", 520.0, 455.0, 
+        TextParams {
+            font,
+            font_size: 20,
+            color: WHITE,
+            ..Default::default()
+        },
+    );
+
+    draw_text_ex(lines_removed, 620.0, 455.0, 
         TextParams {
             font,
             font_size: 20,
@@ -324,18 +343,20 @@ async fn main() {
             GameState::InitLevel => {
                 game.level = 1;
                 game.score = 0;
+                game.lines_removed = 0;
                 game_state = GameState::Game;
             },
             GameState::Game => {
                 draw_board(&points, &resources);
-                draw_info(resources.font, game.score.to_string().as_str(), game.level.to_string().as_str());
+                draw_info(resources.font, 
+                          game.score.to_string().as_str(), 
+                          game.level.to_string().as_str(), 
+                          game.lines_removed.to_string().as_str());
                 
                 if shapes.len() == 0 {
                     let shape_type = next_shape;
                     next_shape = select_shape();
                     shapes.push(
-                        // DEBUG
-                        //Shape::new(7.0 * resources::BLOCKSIZE, 1.0 * resources::BLOCKSIZE, "J", &resources).await,
                         Shape::new(7.0 * resources::BLOCKSIZE, 1.0 * resources::BLOCKSIZE, shape_type, &resources).await,
                     );
                 }
@@ -369,14 +390,12 @@ async fn main() {
                         }
                     }
 
-                    if is_key_down(KeyCode::Down) {
-                        game.falling_speed = 0.1;
-                    } else {
-                        game.falling_speed = resources::INIT_SPEED;
-                    }
-
                     if can_move(shape, &points, "down".to_string()) {
-                        shape.move_down(game.falling_speed);
+                        if is_key_down(KeyCode::Down) {
+                            shape.move_down(0.1);
+                        } else {
+                            shape.move_down(game.falling_speed);
+                        }
                     } else {
                         // Достигли потолка
                         if ((shape.y / resources::BLOCKSIZE) as i32) < 2 {
@@ -435,6 +454,42 @@ async fn main() {
                             _ => {
                                 game.score += 1;
                             }
+                        }
+                        game.lines_removed += lines_removed;
+                    }
+
+                    match game.lines_removed {
+                        0..=10 => {
+                            game.level = 1;
+                            game.falling_speed = resources::INIT_SPEED;
+                        },
+                        11..=30 => {
+                            game.level = 2;
+                            game.falling_speed = 0.8;
+                        },
+                        31..=50 => {
+                            game.level = 3;
+                            game.falling_speed = 0.7;
+                        },
+                        51..=70 => {
+                            game.level = 4;
+                            game.falling_speed = 0.6;
+                        },
+                        71..=80 => {
+                            game.level = 5;
+                            game.falling_speed = 0.5;
+                        },
+                        81..=90 => {
+                            game.level = 6;
+                            game.falling_speed = 0.4;
+                        },
+                        91..=100 => {
+                            game.level = 7;
+                            game.falling_speed = 0.3;
+                        },
+                        _ => {
+                            game.level = 8;
+                            game.falling_speed = 0.2;
                         }
                     }
 

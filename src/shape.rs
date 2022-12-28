@@ -11,6 +11,7 @@ pub struct Shape {
     pub shape_type: String,
     last_update_time: f64,
     pub rotation_index: i32,
+    pub i_am_next_shape: bool,
 }
 
 impl Shape {
@@ -66,6 +67,7 @@ impl Shape {
             last_update_time: get_time(),
             shape_type: t,
             rotation_index: 0,
+            i_am_next_shape: true,
         }
     }
 
