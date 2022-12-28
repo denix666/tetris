@@ -18,3 +18,5 @@ To run:
 ```shell
 cargo run
 ```
+## Screenshot
+![intro](screenshots/game_play.png)

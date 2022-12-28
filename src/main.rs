@@ -83,7 +83,7 @@ fn make_board_array() -> Vec<Point> {
 
     for x in 17..24 {
         for y in 0..18 {
-            if y > 1 && y < 7 && x >= 17 && x < 23 || // Next shape window
+            if y >= 1 && y < 7 && x >= 17 && x < 23 || // Next shape window
                y > 7 && y < 10 && x >= 17 && x < 23 || // Score window
                y > 10 && y < 13 && x >= 17 && x < 23 || // Level window
                y > 13 && y < 16 && x >= 17 && x < 23 // Lines removed window
@@ -244,9 +244,11 @@ fn window_conf() -> Conf {
 }
 
 pub enum GameState {
+    Intro,
     InitLevel,
     Game,
     LevelFail,
+    Paused,
 }
 
 fn select_shape() -> &'static str {
@@ -262,8 +264,37 @@ fn select_shape() -> &'static str {
     return shape_type
 }
 
+fn show_text(font: Font, header_text: &str, message_text: &str) {
+    let header_dims = measure_text(header_text, Some(font), 60, 1.0);
+    let message_dims = measure_text(message_text, Some(font), 23, 1.0);
+
+    draw_text_ex(
+        &header_text,
+        290.0 - header_dims.width * 0.5,
+        240.0,
+        TextParams {
+            font,
+            font_size: 50,
+            color: ORANGE,
+            ..Default::default()
+        },
+    );
+
+    draw_text_ex(
+        &message_text,
+        260.0 - message_dims.width * 0.5,
+        280.0,
+        TextParams {
+            font,
+            font_size: 23,
+            color: ORANGE,
+            ..Default::default()
+        },
+    );
+}
+
 pub fn draw_info(font: Font, score: &str, level: &str, lines_removed: &str) {
-    draw_text_ex("NEXT: ", 560.0, 90.0, 
+    draw_text_ex("NEXT: ", 560.0, 60.0, 
         TextParams {
             font,
             font_size: 25,
@@ -329,9 +360,10 @@ pub fn draw_info(font: Font, score: &str, level: &str, lines_removed: &str) {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let mut game_state = GameState::InitLevel;
+    let mut game_state = GameState::Intro;
     let mut points: Vec<Point> = make_board_array();
     let mut shapes: Vec<Shape> = Vec::new();
+    let mut next_shapes: Vec<Shape> = Vec::new();
     let resources = Resources::new().await;
     let mut game = Game::new().await;
     let mut next_shape = select_shape();
@@ -340,13 +372,26 @@ async fn main() {
         clear_background(BLACK);
 
         match game_state {
+            GameState::Intro => {
+                draw_texture(resources.intro, 0.0, 0.0, WHITE);
+                if is_key_pressed(KeyCode::Space) {
+                    game_state = GameState::InitLevel;
+                }
+            },
             GameState::InitLevel => {
+                points.clear();
+                points = make_board_array();
+                shapes.clear();
+                next_shapes.clear();
                 game.level = 1;
                 game.score = 0;
                 game.lines_removed = 0;
                 game_state = GameState::Game;
             },
             GameState::Game => {
+                if is_key_pressed(KeyCode::Escape) {
+                    game_state = GameState::Paused;
+                }
                 draw_board(&points, &resources);
                 draw_info(resources.font, 
                           game.score.to_string().as_str(), 
@@ -356,9 +401,20 @@ async fn main() {
                 if shapes.len() == 0 {
                     let shape_type = next_shape;
                     next_shape = select_shape();
+                    
                     shapes.push(
                         Shape::new(7.0 * resources::BLOCKSIZE, 1.0 * resources::BLOCKSIZE, shape_type, &resources).await,
                     );
+                    shapes[0].i_am_next_shape = false;
+
+                    next_shapes.clear();
+                    next_shapes.push(
+                        Shape::new(0.0, 0.0, next_shape, &resources).await,
+                    );
+                }
+
+                for next in &mut next_shapes {
+                    next.draw();
                 }
 
                 for shape in &mut shapes {
@@ -498,8 +554,40 @@ async fn main() {
             },
             GameState::LevelFail => {
                 draw_board(&points, &resources);
+                draw_info(resources.font, 
+                    game.score.to_string().as_str(), 
+                    game.level.to_string().as_str(), 
+                    game.lines_removed.to_string().as_str());
+                
                 for shape in &mut shapes {
                     shape.draw();
+                }
+
+                show_text(resources.font, "Game over", "Press 'space' to continue...");
+
+                if is_key_pressed(KeyCode::Space) {
+                    game_state = GameState::InitLevel;
+                }
+            },
+            GameState::Paused => {
+                draw_board(&points, &resources);
+                draw_info(resources.font, 
+                    game.score.to_string().as_str(), 
+                    game.level.to_string().as_str(), 
+                    game.lines_removed.to_string().as_str());
+
+                for next in &mut next_shapes {
+                    next.draw();
+                }
+
+                for shape in &mut shapes {
+                    shape.draw();
+                }
+
+                show_text(resources.font, "PAUSED", "Press 'space' to continue...");
+
+                if is_key_pressed(KeyCode::Space) {
+                    game_state = GameState::Game;
                 }
             },
         }

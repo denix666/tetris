@@ -1,17 +1,20 @@
 use macroquad::prelude::*;
 
-// размер всего окна игры
+// window size in pixels
 pub const RES_WIDTH: i32 = 720;
 pub const RES_HEIGHT: i32 = 540;
 
+// rows and columns sizes
 pub const NCOLS: i32 = 16; // X
 pub const NROWS: i32 = 17; // Y
 
-// размер блока в пикселях
+// cell size in pixels
 pub const BLOCKSIZE: f32 = 30.0;
 
+// init falling speed
 pub const INIT_SPEED: f64 = 0.9;
 
+// shape movement delay
 pub const THREAD_SLEEP: u64 = 90;
 
 pub struct Resources {
@@ -24,6 +27,7 @@ pub struct Resources {
     pub j: Texture2D,
     pub s: Texture2D,
     pub font: Font,
+    pub intro: Texture2D,
 }
 
 impl Resources {
@@ -38,6 +42,7 @@ impl Resources {
             j: load_texture("assets/images/yellow.png").await.unwrap(),
             s: load_texture("assets/images/blue.png").await.unwrap(),
             font: load_ttf_font("assets/fonts/game_font.ttf").await.unwrap(),
+            intro: load_texture("assets/images/intro.png").await.unwrap(),
         }
     }
 }

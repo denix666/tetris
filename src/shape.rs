@@ -151,11 +151,22 @@ impl Shape {
     }
 
     pub fn draw(&mut self) {
+        if self.i_am_next_shape {
+            self.rotation_index = 0;
+        }
         self.update();
-        for i in self.shape_structure {
-            let x: f32 = self.x + i[0] as f32 * resources::BLOCKSIZE;
-            let y: f32 = self.y + i[1] as f32 * resources::BLOCKSIZE;
-            draw_texture(self.texture, x, y, WHITE);
+        if self.i_am_next_shape {
+            for i in self.shape_structure {
+                let x: f32 = 595.0 + i[0] as f32 * resources::BLOCKSIZE;
+                let y: f32 = 110.0 + i[1] as f32 * resources::BLOCKSIZE;
+                draw_texture(self.texture, x, y, WHITE);
+            }
+        } else {
+            for i in self.shape_structure {
+                let x: f32 = self.x + i[0] as f32 * resources::BLOCKSIZE;
+                let y: f32 = self.y + i[1] as f32 * resources::BLOCKSIZE;
+                draw_texture(self.texture, x, y, WHITE);
+            }
         }
     }
 }
