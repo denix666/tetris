@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
 // размер всего окна игры
-pub const RES_WIDTH: i32 = 510;
+pub const RES_WIDTH: i32 = 720;
 pub const RES_HEIGHT: i32 = 540;
 
 pub const NCOLS: i32 = 16; // X
@@ -23,6 +23,7 @@ pub struct Resources {
     pub o: Texture2D,
     pub j: Texture2D,
     pub s: Texture2D,
+    pub font: Font,
 }
 
 impl Resources {
@@ -36,6 +37,7 @@ impl Resources {
             o: load_texture("assets/images/green.png").await.unwrap(),
             j: load_texture("assets/images/yellow.png").await.unwrap(),
             s: load_texture("assets/images/blue.png").await.unwrap(),
+            font: load_ttf_font("assets/fonts/game_font.ttf").await.unwrap(),
         }
     }
 }

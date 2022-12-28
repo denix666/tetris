@@ -81,6 +81,23 @@ fn make_board_array() -> Vec<Point> {
         }
     }
 
+    for x in 17..24 {
+        for y in 0..18 {
+            if y > 1 && y < 7 && x >= 17 && x < 23 || // Next shape window
+               y > 9 && y < 12 && x >= 17 && x < 23 || // Score window
+               y > 12 && y < 15 && x >= 17 && x < 23 // Level window
+            {
+                points.push(
+                    Point::new(x,y," ".to_string()),
+                );
+            } else {
+                points.push(
+                    Point::new(x,y,"#".to_string()),
+                );
+            }
+        }
+    }
+
     return points
 }
 
@@ -226,34 +243,96 @@ fn window_conf() -> Conf {
 }
 
 pub enum GameState {
+    InitLevel,
     Game,
+    LevelFail,
+}
+
+fn select_shape() -> &'static str {
+    let shape_type = match rand::thread_rng().gen_range(0..=6) { 
+        0 => "L",
+        1 => "Z",
+        2 => "I",
+        3 => "T",
+        4 => "O",
+        5 => "J",
+        _ => "S",
+    };
+    return shape_type
+}
+
+pub fn draw_info(font: Font, score: &str, level: &str) {
+    draw_text_ex("NEXT: ", 560.0, 90.0, 
+        TextParams {
+            font,
+            font_size: 25,
+            color: WHITE,
+            ..Default::default()
+        },
+    );
+    
+    draw_text_ex("SCORE: ", 520.0, 335.0, 
+        TextParams {
+            font,
+            font_size: 20,
+            color: WHITE,
+            ..Default::default()
+        },
+    );
+
+    draw_text_ex(score, 620.0, 335.0, 
+        TextParams {
+            font,
+            font_size: 20,
+            color: ORANGE,
+            ..Default::default()
+        },
+    );
+
+    draw_text_ex("LEVEL: ", 520.0, 425.0, 
+        TextParams {
+            font,
+            font_size: 20,
+            color: WHITE,
+            ..Default::default()
+        },
+    );
+
+    draw_text_ex(level, 620.0, 425.0, 
+        TextParams {
+            font,
+            font_size: 20,
+            color: ORANGE,
+            ..Default::default()
+        },
+    );
 }
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let game_state = GameState::Game;
+    let mut game_state = GameState::InitLevel;
     let mut points: Vec<Point> = make_board_array();
     let mut shapes: Vec<Shape> = Vec::new();
     let resources = Resources::new().await;
     let mut game = Game::new().await;
+    let mut next_shape = select_shape();
 
     loop {
         clear_background(BLACK);
 
         match game_state {
+            GameState::InitLevel => {
+                game.level = 1;
+                game.score = 0;
+                game_state = GameState::Game;
+            },
             GameState::Game => {
                 draw_board(&points, &resources);
+                draw_info(resources.font, game.score.to_string().as_str(), game.level.to_string().as_str());
                 
                 if shapes.len() == 0 {
-                    let shape_type = match rand::thread_rng().gen_range(0..=6) { 
-                        0 => "L",
-                        1 => "Z",
-                        2 => "I",
-                        3 => "T",
-                        4 => "O",
-                        5 => "J",
-                        _ => "S",
-                    };
+                    let shape_type = next_shape;
+                    next_shape = select_shape();
                     shapes.push(
                         // DEBUG
                         //Shape::new(7.0 * resources::BLOCKSIZE, 1.0 * resources::BLOCKSIZE, "J", &resources).await,
@@ -271,6 +350,12 @@ async fn main() {
                     if is_key_down(KeyCode::Left) {
                         if can_move(shape, &points, "left".to_string()) {
                             shape.move_left();
+                        }
+                    }
+
+                    if is_key_pressed(KeyCode::Space) {
+                        while can_move(shape, &points, "down".to_string()) {
+                            shape.move_down(0.0);
                         }
                     }
 
@@ -293,6 +378,12 @@ async fn main() {
                     if can_move(shape, &points, "down".to_string()) {
                         shape.move_down(game.falling_speed);
                     } else {
+                        // Достигли потолка
+                        if ((shape.y / resources::BLOCKSIZE) as i32) < 2 {
+                            game_state = GameState::LevelFail;
+                        }
+
+                        // Перенос блока в массив
                         for i in shape.shape_structure {
                             let x: i32 = (shape.x / resources::BLOCKSIZE) as i32 + i[0];
                             let y: i32 = (shape.y / resources::BLOCKSIZE) as i32 + i[1];
@@ -302,11 +393,60 @@ async fn main() {
                         }
                         
                         shape.destroyed = true;
+
+                        let mut line_filled: bool = false;
+                        let mut lines_removed: i32 = 0;
+                        for r in 2..resources::NROWS {
+                            for c in 1..resources::NCOLS {
+                                if get_val(c, r, &points) != " " {
+                                    line_filled = true;
+                                } else {
+                                    line_filled = false;
+                                    break;
+                                }
+                            }
+                            if line_filled {
+                                for c in 1..resources::NCOLS {
+                                    let mut line = r; 
+                                    while line > 0 {
+                                        let prev_value = get_val(c, line - 1, &points);
+                                        let idx = get_index(c, line, &points);
+                                        points[idx].value = prev_value;
+                                        line -= 1;
+                                    }
+                                }
+                                lines_removed += 1;
+                                line_filled = false;
+                            }
+                        }
+                        match lines_removed {
+                            1 => {
+                                game.score += 10;
+                            },
+                            2 => {
+                                game.score += 30;
+                            },
+                            3 => {
+                                game.score += 50;
+                            },
+                            4 => {
+                                game.score += 100;
+                            },
+                            _ => {
+                                game.score += 1;
+                            }
+                        }
                     }
 
                     shape.draw();
                 }
-            }
+            },
+            GameState::LevelFail => {
+                draw_board(&points, &resources);
+                for shape in &mut shapes {
+                    shape.draw();
+                }
+            },
         }
 
         // GC
