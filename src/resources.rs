@@ -1,4 +1,4 @@
-use macroquad::prelude::*;
+use macroquad::{prelude::*, audio::{Sound, load_sound}};
 
 // window size in pixels
 pub const RES_WIDTH: i32 = 720;
@@ -28,6 +28,11 @@ pub struct Resources {
     pub s: Texture2D,
     pub font: Font,
     pub intro: Texture2D,
+    pub music: Sound,
+    pub pause: Sound,
+    pub removed_1_line: Sound,
+    pub removed_4_lines: Sound,
+    pub level_up: Sound,
 }
 
 impl Resources {
@@ -43,6 +48,11 @@ impl Resources {
             s: load_texture("assets/images/blue.png").await.unwrap(),
             font: load_ttf_font("assets/fonts/game_font.ttf").await.unwrap(),
             intro: load_texture("assets/images/intro.png").await.unwrap(),
+            music: load_sound("assets/music/game_loop.ogg").await.unwrap(),
+            pause: load_sound("assets/sounds/pause.ogg").await.unwrap(),
+            removed_1_line: load_sound("assets/sounds/removed_1_line.ogg").await.unwrap(),
+            removed_4_lines: load_sound("assets/sounds/removed_4_lines.ogg").await.unwrap(),
+            level_up: load_sound("assets/sounds/level_up.ogg").await.unwrap(),
         }
     }
 }

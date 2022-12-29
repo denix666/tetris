@@ -1,8 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use macroquad::prelude::*;
+use std::process;
+
+use macroquad::{prelude::*, audio::{play_sound, PlaySoundParams, stop_sound}};
 extern crate rand;
 use rand::Rng;
+use egui_macroquad::egui::{self, RichText, Color32};
 
 mod points;
 use points::Point;
@@ -367,6 +370,12 @@ async fn main() {
     let resources = Resources::new().await;
     let mut game = Game::new().await;
     let mut next_shape = select_shape();
+    let mut sound_enabled: bool = true;
+    let mut sound_volume_level: f32 = 0.2;
+    let mut music_enabled: bool = true;
+    let mut music_volume_level: f32 = 0.06;
+    let mut music_started: bool = false;
+    let mut previous_level_num = 1;
 
     loop {
         clear_background(BLACK);
@@ -387,10 +396,26 @@ async fn main() {
                 game.score = 0;
                 game.lines_removed = 0;
                 game_state = GameState::Game;
+                music_started = false;
             },
             GameState::Game => {
+                if music_enabled && !music_started {
+                    play_sound(resources.music, PlaySoundParams {
+                        looped: true,
+                        volume: music_volume_level,
+                    });
+                    music_started = true;
+                }
+                
                 if is_key_pressed(KeyCode::Escape) {
+                    stop_sound(resources.music);
                     game_state = GameState::Paused;
+                    if sound_enabled {
+                        play_sound(resources.pause, PlaySoundParams {
+                            looped: false,
+                            volume: sound_volume_level,
+                        });
+                    }
                 }
                 draw_board(&points, &resources);
                 draw_info(resources.font, 
@@ -497,15 +522,39 @@ async fn main() {
                         match lines_removed {
                             1 => {
                                 game.score += 10;
+                                if sound_enabled {
+                                    play_sound(resources.removed_1_line, PlaySoundParams {
+                                        looped: false,
+                                        volume: sound_volume_level,
+                                    });
+                                }
                             },
                             2 => {
                                 game.score += 30;
+                                if sound_enabled {
+                                    play_sound(resources.removed_1_line, PlaySoundParams {
+                                        looped: false,
+                                        volume: sound_volume_level,
+                                    });
+                                }
                             },
                             3 => {
                                 game.score += 50;
+                                if sound_enabled {
+                                    play_sound(resources.removed_1_line, PlaySoundParams {
+                                        looped: false,
+                                        volume: sound_volume_level,
+                                    });
+                                }
                             },
                             4 => {
                                 game.score += 100;
+                                if sound_enabled {
+                                    play_sound(resources.removed_4_lines, PlaySoundParams {
+                                        looped: false,
+                                        volume: sound_volume_level,
+                                    });
+                                }
                             },
                             _ => {
                                 game.score += 1;
@@ -549,10 +598,21 @@ async fn main() {
                         }
                     }
 
+                    if game.level != previous_level_num {
+                        previous_level_num = game.level;
+                        if sound_enabled {
+                            play_sound(resources.level_up, PlaySoundParams {
+                                looped: false,
+                                volume: sound_volume_level,
+                            });
+                        }
+                    }
+
                     shape.draw();
                 }
             },
             GameState::LevelFail => {
+                stop_sound(resources.music);
                 draw_board(&points, &resources);
                 draw_info(resources.font, 
                     game.score.to_string().as_str(), 
@@ -585,9 +645,41 @@ async fn main() {
                 }
 
                 show_text(resources.font, "PAUSED", "Press 'space' to continue...");
+                egui_macroquad::ui(|egui_ctx| {
+                    egui::Window::new("Settings").current_pos([125.0, 40.0]).show(egui_ctx, |ui| {
+                        ui.checkbox(&mut sound_enabled, "sound");
+                        ui.add(egui::Slider::new(&mut sound_volume_level, 0.0..=0.9).text("Sound volume level"));
 
-                if is_key_pressed(KeyCode::Space) {
+                        ui.checkbox(&mut music_enabled, "music");
+                        ui.add(egui::Slider::new(&mut music_volume_level, 0.0..=0.9).text("Music volume level"));
+                        
+                        ui.horizontal(|ui| {
+                            if ui.button("Close").clicked() {
+                                game_state = GameState::Game;
+                                if music_enabled {
+                                    play_sound(resources.music, PlaySoundParams {
+                                        looped: true,
+                                        volume: music_volume_level,
+                                    });
+                                }
+                            }
+                            if ui.button(RichText::new("Quit game").color(Color32::RED)).clicked() {
+                                process::exit(0x0100);
+                            }
+                        }); 
+                    });
+                });
+                    
+                egui_macroquad::draw();
+
+                if is_key_pressed(KeyCode::Space) | is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Game;
+                    if music_enabled {
+                        play_sound(resources.music, PlaySoundParams {
+                            looped: true,
+                            volume: music_volume_level,
+                        });
+                    }
                 }
             },
         }
